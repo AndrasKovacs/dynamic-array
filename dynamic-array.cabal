@@ -1,0 +1,30 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.33.0.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 601d528357b0d5a35de007c9c5c3219a88f3c6d0bbd4190502d9bf61ba2a1290
+
+name:           dynamic-array
+version:        0.1.0.0
+author:         András Kovács
+maintainer:     puttamalac@gmail.com
+copyright:      2018-2020 András Kovács
+license:        BSD3
+build-type:     Simple
+
+library
+  exposed-modules:
+      Data.Array.Dynamic.L
+      Data.Array.Dynamic.U
+  other-modules:
+      Paths_dynamic_array
+  hs-source-dirs:
+      ./.
+  default-extensions: GeneralizedNewtypeDeriving KindSignatures LambdaCase MagicHash RankNTypes RoleAnnotations UndecidableInstances
+  ghc-options: -Wall -Wno-missing-signatures -Wno-name-shadowing -Wno-unused-do-bind -Wno-unused-matches -Wno-partial-type-signatures -O2 -fllvm
+  build-depends:
+      base >=4.7 && <5
+    , primdata
+  default-language: Haskell2010
