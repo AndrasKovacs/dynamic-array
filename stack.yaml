@@ -1,0 +1,11 @@
+resolver: lts-16.31
+
+packages:
+- .
+
+extra-deps:
+- git: https://github.com/AndrasKovacs/primdata.git
+  commit: 32c3ab9aa9cfaccab57733069404e843c27414a5
+
+ghc-options:
+    "$everything": -split-sections
