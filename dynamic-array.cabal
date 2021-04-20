@@ -4,10 +4,10 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 601d528357b0d5a35de007c9c5c3219a88f3c6d0bbd4190502d9bf61ba2a1290
+-- hash: 6d940ff1f1a6b4e13061bb2ee4fe67924af81a336955ac9706343c1b2a05d3f0
 
 name:           dynamic-array
-version:        0.1.0.0
+version:        0.1.1.0
 author:         András Kovács
 maintainer:     puttamalac@gmail.com
 copyright:      2018-2020 András Kovács

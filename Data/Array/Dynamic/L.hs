@@ -14,16 +14,16 @@ module Data.Array.Dynamic.L  (
   , unsafeLast
   , Data.Array.Dynamic.L.last
   , isEmpty
-  -- , foldl'
-  -- , foldlIx'
-  -- , foldr'
-  -- , foldrIx'
-  -- , Data.Array.Dynamic.any
-  -- , Data.Array.Dynamic.all
-  -- , allIx
-  -- , anyIx
-  -- , forM_
-  -- , forMIx_
+  , foldl'
+  , foldlIx'
+  , foldr'
+  , foldrIx'
+  , Data.Array.Dynamic.L.any
+  , Data.Array.Dynamic.L.all
+  , allIx
+  , anyIx
+  , for
+  , forIx
   ) where
 
 import Data.Unlifted
@@ -145,75 +145,72 @@ show (Array r) = do
   elems' <- LM.freezeSlice elems 0 size
   pure (Prelude.show elems')
 
--- foldl' :: forall a b. (b -> a -> b) -> b -> Array a -> IO b
--- foldl' f b = \arr -> _
+foldl' :: forall a b. (b -> a -> b) -> b -> Array a -> IO b
+foldl' f b = \arr -> do
+  s <- size arr
+  let go i b | i == s    = pure b
+             | otherwise = do
+                 a <- unsafeRead arr i
+                 go (i + 1) $! f b a
+  go 0 b
+{-# inline foldl' #-}
 
--- foldl' f b = \arr -> do
---   s <- size arr
---   let go i b | i == s    = pure b
---              | otherwise = do
---                  a <- unsafeRead arr i
---                  go (i + 1) $! f b a
---   go 0 b
--- {-# inline foldl' #-}
+foldlIx' :: (Int -> b -> a -> b) -> b -> Array a -> IO b
+foldlIx' f b = \arr -> do
+  s <- size arr
+  let go i b | i == s    = pure b
+             | otherwise = do
+                 a <- unsafeRead arr i
+                 go (i + 1) $! f i b a
+  go 0 b
+{-# inline foldlIx' #-}
 
--- foldlIx' :: (Int -> b -> a -> b) -> b -> Array a -> IO b
--- foldlIx' f b = \arr -> do
---   s <- size arr
---   let go i b | i == s    = pure b
---              | otherwise = do
---                  a <- unsafeRead arr i
---                  go (i + 1) $! f i b a
---   go 0 b
--- {-# inline foldlIx' #-}
+foldr' :: (a -> b -> b) -> b -> Array a -> IO b
+foldr' f b = \arr -> do
+  s <- size arr
+  let go i b | i == (-1) = pure b
+             | otherwise = do
+                 a <- unsafeRead arr i
+                 go (i - 1) $! f a b
+  go (s - 1) b
+{-# inline foldr' #-}
 
--- foldr' :: (a -> b -> b) -> b -> Array a -> IO b
--- foldr' f b = \arr -> do
---   s <- size arr
---   let go i b | i == (-1) = pure b
---              | otherwise = do
---                  a <- unsafeRead arr i
---                  go (i - 1) $! f a b
---   go (s - 1) b
--- {-# inline foldr' #-}
+foldrIx' :: (Int -> a -> b -> b) -> b -> Array a -> IO b
+foldrIx' f b = \arr -> do
+  s <- size arr
+  let go i b | i == (-1) = pure b
+             | otherwise = do
+                 a <- unsafeRead arr i
+                 go (i - 1) $! f i a b
+  go (s - 1) b
+{-# inline foldrIx' #-}
 
--- foldrIx' :: (Int -> a -> b -> b) -> b -> Array a -> IO b
--- foldrIx' f b = \arr -> do
---   s <- size arr
---   let go i b | i == (-1) = pure b
---              | otherwise = do
---                  a <- unsafeRead arr i
---                  go (i - 1) $! f i a b
---   go (s - 1) b
--- {-# inline foldrIx' #-}
+any :: (a -> Bool) -> Array a -> IO Bool
+any f = foldl' (\b a -> f a || b) False
+{-# inline any #-}
 
--- -- TODO: any + all with lazy fold
--- any :: (a -> Bool) -> Array a -> IO Bool
--- any f = foldl' (\b a -> f a || b) False
--- {-# inline any #-}
+all :: (a -> Bool) -> Array a -> IO Bool
+all f = foldl' (\b a -> f a && b) True
+{-# inline all #-}
 
--- all :: (a -> Bool) -> Array a -> IO Bool
--- all f = foldl' (\b a -> f a && b) True
--- {-# inline all #-}
+anyIx :: (Int -> a -> Bool) -> Array a -> IO Bool
+anyIx f = foldlIx' (\i b a -> f i a || b) False
+{-# inline anyIx #-}
 
--- anyIx :: (Int -> a -> Bool) -> Array a -> IO Bool
--- anyIx f = foldlIx' (\i b a -> f i a || b) False
--- {-# inline anyIx #-}
+allIx :: (Int -> a -> Bool) -> Array a -> IO Bool
+allIx f = foldlIx' (\i b a -> f i a && b) True
+{-# inline allIx #-}
 
--- allIx :: (Int -> a -> Bool) -> Array a -> IO Bool
--- allIx f = foldlIx' (\i b a -> f i a && b) True
--- {-# inline allIx #-}
+for :: Array a -> (a -> IO b) -> IO ()
+for arr f = go (0 :: Int) where
+  go i = do
+    s <- size arr
+    if i == s then pure () else do {x <- unsafeRead arr i; f x; go (i + 1)}
+{-# inline for #-}
 
--- forM_ :: Array a -> (a -> IO b) -> IO ()
--- forM_ arr f = go (0 :: Int) where
---   go i = do
---     s <- size arr
---     if i == s then pure () else do {x <- unsafeRead arr i; f x; go (i + 1)}
--- {-# inline forM_ #-}
-
--- forMIx_ :: Array a -> (Int -> a -> IO b) -> IO ()
--- forMIx_ arr f = go (0 :: Int) where
---   go i = do
---     s <- size arr
---     if i == s then pure () else do {x <- unsafeRead arr i; f i x; go (i + 1)}
--- {-# inline forMIx_ #-}
+forIx :: Array a -> (Int -> a -> IO b) -> IO ()
+forIx arr f = go (0 :: Int) where
+  go i = do
+    s <- size arr
+    if i == s then pure () else do {x <- unsafeRead arr i; f i x; go (i + 1)}
+{-# inline forIx #-}
