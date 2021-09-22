@@ -1,17 +1,15 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.33.0.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
---
--- hash: 6d940ff1f1a6b4e13061bb2ee4fe67924af81a336955ac9706343c1b2a05d3f0
 
 name:           dynamic-array
-version:        0.1.1.0
+version:        0.1.2.0
 author:         András Kovács
 maintainer:     puttamalac@gmail.com
-copyright:      2018-2020 András Kovács
-license:        BSD3
+copyright:      2018-2021 András Kovács
+license:        MIT
 build-type:     Simple
 
 library
@@ -21,8 +19,7 @@ library
   other-modules:
       Paths_dynamic_array
   hs-source-dirs:
-      ./.
-  default-extensions: GeneralizedNewtypeDeriving KindSignatures LambdaCase MagicHash RankNTypes RoleAnnotations UndecidableInstances
+      ./
   ghc-options: -Wall -Wno-missing-signatures -Wno-name-shadowing -Wno-unused-do-bind -Wno-unused-matches -Wno-partial-type-signatures -O2 -fllvm
   build-depends:
       base >=4.7 && <5

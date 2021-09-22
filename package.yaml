@@ -1,21 +1,9 @@
 name:                dynamic-array
-version:             0.1.1.0
-license:             BSD3
+version:             0.1.2.0
+license:             MIT
 author:              "András Kovács"
 maintainer:          "puttamalac@gmail.com"
-copyright:           "2018-2020 András Kovács"
-
-dependencies:
-- base >= 4.7 && < 5
-
-default-extensions:
-  - GeneralizedNewtypeDeriving
-  - KindSignatures
-  - LambdaCase
-  - MagicHash
-  - RankNTypes
-  - RoleAnnotations
-  - UndecidableInstances
+copyright:           "2018-2021 András Kovács"
 
 ghc-options:
   - -Wall
@@ -30,9 +18,5 @@ ghc-options:
 library:
   source-dirs: .
   dependencies:
+    - base >= 4.7 && < 5
     - primdata
-  # ghc-options:
-  #   - -ddump-simpl
-  #   - -dsuppress-all
-  #   - -dno-suppress-type-signatures
-  #   - -ddump-to-file

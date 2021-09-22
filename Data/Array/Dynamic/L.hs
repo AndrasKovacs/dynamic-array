@@ -1,3 +1,6 @@
+{-# language
+   RankNTypes, LambdaCase, KindSignatures, RoleAnnotations,
+   GeneralizedNewtypeDeriving, UndecidableInstances #-}
 
 module Data.Array.Dynamic.L  (
     empty
@@ -28,13 +31,14 @@ module Data.Array.Dynamic.L  (
 
 import Data.Unlifted
 import Data.Array.UndefElem
+import Data.Kind
 
 import qualified Data.Ref.UU   as RUU
 import qualified Data.Ref.F    as RF
 import qualified Data.Array.LM as LM
 
 type role Array representational
-newtype Array (a :: *) = Array (RUU.Ref (RF.Ref Int) (LM.Array a))
+newtype Array (a :: Type) = Array (RUU.Ref (RF.Ref Int) (LM.Array a))
   deriving Unlifted
 
 defaultCapacity :: Int
