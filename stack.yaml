@@ -5,7 +5,7 @@ packages:
 
 extra-deps:
 - git: https://github.com/AndrasKovacs/primdata.git
-  commit: a6b05e301f60f66a65497ec2105176c1f22b4317
+  commit: 72e76bad5291fb5392c5c63c11f0d44dfbec904a
 
 ghc-options:
     "$everything": -split-sections
