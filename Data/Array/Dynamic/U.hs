@@ -4,7 +4,7 @@
 
 module Data.Array.Dynamic.U  (
     empty
-  , Array
+  , Array(..)
   , clear
   , push
   , Data.Array.Dynamic.U.read

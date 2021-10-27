@@ -4,7 +4,7 @@
 
 module Data.Array.Dynamic.L  (
     empty
-  , Array
+  , Array(..)
   , clear
   , push
   , Data.Array.Dynamic.L.read
