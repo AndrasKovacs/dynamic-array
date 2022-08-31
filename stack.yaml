@@ -1,11 +1,11 @@
-resolver: nightly-2021-09-18
+resolver: lts-19.21
 
 packages:
 - .
 
 extra-deps:
 - git: https://github.com/AndrasKovacs/primdata.git
-  commit: 72e76bad5291fb5392c5c63c11f0d44dfbec904a
+  commit: 644230c40c11ff10f04dbd9b00256c6691972594
 
 ghc-options:
     "$everything": -split-sections

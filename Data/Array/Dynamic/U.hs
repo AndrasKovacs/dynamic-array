@@ -1,12 +1,14 @@
 {-# language
-   RankNTypes, LambdaCase, KindSignatures, RoleAnnotations,
+   RankNTypes, LambdaCase, KindSignatures, RoleAnnotations, BangPatterns,
    GeneralizedNewtypeDeriving, UndecidableInstances #-}
 
 module Data.Array.Dynamic.U  (
     empty
   , Array(..)
+  , capacity
   , clear
   , push
+  , pop
   , Data.Array.Dynamic.U.read
   , Data.Array.Dynamic.U.show
   , size
@@ -20,6 +22,7 @@ module Data.Array.Dynamic.U  (
   , foldlIx'
   , foldr'
   , foldrIx'
+  , fromList
   , Data.Array.Dynamic.U.any
   , Data.Array.Dynamic.U.all
   , allIx
@@ -50,6 +53,12 @@ empty = do
   arrRef  <- UM.new defaultCapacity defaultElem
   Array <$> RUU.new sizeRef arrRef
 {-# inline empty #-}
+
+capacity :: Array a -> IO Int
+capacity (Array r) = do
+  elems <- RUU.readSnd r
+  pure $! UM.size elems
+{-# inline capacity #-}
 
 unsafeRead :: Unlifted a => Array a -> Int -> IO a
 unsafeRead (Array r) i = do
@@ -96,6 +105,33 @@ push (Array r) ~a = do
   else do
     UM.write elems size a
 {-# inline push #-}
+
+pop :: Unlifted a => Array a -> IO (Maybe a)
+pop (Array r) = do
+  sizeRef <- RUU.readFst r
+  size    <- RF.read sizeRef
+  case size of
+    0    -> pure Nothing
+    size -> do
+      elems <- RUU.readSnd r
+      let size' = size - 1
+      a <- UM.read elems size'
+      UM.write elems size' undefElem
+      RF.write sizeRef size'
+      pure $! Just a
+{-# inline pop #-}
+
+fromList :: Unlifted a => [a] -> IO (Array a)
+fromList as = do
+  let size = length as
+      cap  = size + defaultCapacity
+  sizeRef <- RF.new size
+  arrRef  <- UM.new cap undefElem
+  arr     <- RUU.new sizeRef arrRef
+  let go !i []     = pure ()
+      go i  (a:as) = UM.write arrRef i a >> go (i + 1) as
+  go 0 as
+  pure (Array arr)
 
 clear :: Unlifted a => Array a -> IO ()
 clear (Array r) = do

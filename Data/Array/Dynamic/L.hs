@@ -1,12 +1,14 @@
 {-# language
-   RankNTypes, LambdaCase, KindSignatures, RoleAnnotations,
+   RankNTypes, LambdaCase, KindSignatures, RoleAnnotations, BangPatterns,
    GeneralizedNewtypeDeriving, UndecidableInstances #-}
 
 module Data.Array.Dynamic.L  (
     empty
   , Array(..)
+  , capacity
   , clear
   , push
+  , pop
   , Data.Array.Dynamic.L.read
   , Data.Array.Dynamic.L.show
   , size
@@ -21,6 +23,7 @@ module Data.Array.Dynamic.L  (
   , foldlIx'
   , foldr'
   , foldrIx'
+  , fromList
   , Data.Array.Dynamic.L.any
   , Data.Array.Dynamic.L.all
   , allIx
@@ -45,12 +48,30 @@ defaultCapacity :: Int
 defaultCapacity = 5
 {-# inline defaultCapacity #-}
 
+fromList :: [a] -> IO (Array a)
+fromList as = do
+  let size = length as
+      cap  = size + defaultCapacity
+  sizeRef <- RF.new size
+  arrRef  <- LM.new cap undefElem
+  arr     <- RUU.new sizeRef arrRef
+  let go !i []     = pure ()
+      go i  (a:as) = LM.write arrRef i a >> go (i + 1) as
+  go 0 as
+  pure (Array arr)
+
 empty :: forall a. IO (Array a)
 empty = do
   sizeRef <- RF.new 0
   arrRef  <- LM.new defaultCapacity undefElem
   Array <$> RUU.new sizeRef arrRef
 {-# inline empty #-}
+
+capacity :: Array a -> IO Int
+capacity (Array r) = do
+  elems <- RUU.readSnd r
+  pure $! LM.size elems
+{-# inline capacity #-}
 
 unsafeRead :: Array a -> Int -> IO a
 unsafeRead (Array r) i = do
@@ -113,6 +134,21 @@ push (Array r) ~a = do
   else do
     LM.write elems size a
 {-# inline push #-}
+
+pop :: Array a -> IO (Maybe a)
+pop (Array r) = do
+  sizeRef <- RUU.readFst r
+  size    <- RF.read sizeRef
+  case size of
+    0    -> pure Nothing
+    size -> do
+      elems <- RUU.readSnd r
+      let size' = size - 1
+      a <- LM.read elems size'
+      LM.write elems size' undefElem
+      RF.write sizeRef size'
+      pure $! Just a
+{-# inline pop #-}
 
 clear :: Array a -> IO ()
 clear (Array r) = do
