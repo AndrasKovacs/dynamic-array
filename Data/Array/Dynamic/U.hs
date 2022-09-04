@@ -23,6 +23,7 @@ module Data.Array.Dynamic.U  (
   , foldr'
   , foldrIx'
   , fromList
+  , freeze
   , Data.Array.Dynamic.U.any
   , Data.Array.Dynamic.U.all
   , allIx
@@ -38,6 +39,7 @@ import Data.Kind
 import qualified Data.Ref.UU   as RUU
 import qualified Data.Ref.F    as RF
 import qualified Data.Array.UM as UM
+import qualified Data.Array.UI as UI
 
 type role Array representational
 newtype Array (a :: Type) = Array (RUU.Ref (RF.Ref Int) (UM.Array a))
@@ -69,7 +71,9 @@ unsafeRead (Array r) i = do
 read :: Unlifted a => Array a -> Int -> IO a
 read (Array r) i = do
   elems <- RUU.readSnd r
-  if 0 <= i && i < UM.size elems then
+  sizeRef <- RUU.readFst r
+  size <- RF.read sizeRef
+  if 0 <= i && i < size then
     UM.read elems i
   else
     error "Data.Array.Dynamic.U.read: out of bounds"
@@ -126,12 +130,21 @@ fromList as = do
   let size = length as
       cap  = size + defaultCapacity
   sizeRef <- RF.new size
-  arrRef  <- UM.new cap undefElem
+  arrRef  <- UM.new cap defaultElem
   arr     <- RUU.new sizeRef arrRef
   let go !i []     = pure ()
       go i  (a:as) = UM.write arrRef i a >> go (i + 1) as
   go 0 as
   pure (Array arr)
+
+freeze :: Unlifted a => Array a -> IO (UI.Array a)
+freeze (Array arr) = do
+  sizeRef <- RUU.readFst arr
+  elems   <- RUU.readSnd arr
+  size    <- RF.read sizeRef
+  tgt     <- UM.new size defaultElem
+  UM.copySlice elems 0 tgt 0 size
+  UM.unsafeFreeze tgt
 
 clear :: Unlifted a => Array a -> IO ()
 clear (Array r) = do

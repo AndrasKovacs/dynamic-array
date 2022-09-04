@@ -24,6 +24,7 @@ module Data.Array.Dynamic.L  (
   , foldr'
   , foldrIx'
   , fromList
+  , freeze
   , Data.Array.Dynamic.L.any
   , Data.Array.Dynamic.L.all
   , allIx
@@ -39,6 +40,7 @@ import Data.Kind
 import qualified Data.Ref.UU   as RUU
 import qualified Data.Ref.F    as RF
 import qualified Data.Array.LM as LM
+import qualified Data.Array.LI as LI
 
 type role Array representational
 newtype Array (a :: Type) = Array (RUU.Ref (RF.Ref Int) (LM.Array a))
@@ -59,6 +61,15 @@ fromList as = do
       go i  (a:as) = LM.write arrRef i a >> go (i + 1) as
   go 0 as
   pure (Array arr)
+
+freeze :: Array a -> IO (LI.Array a)
+freeze (Array arr) = do
+  sizeRef <- RUU.readFst arr
+  elems   <- RUU.readSnd arr
+  size    <- RF.read sizeRef
+  tgt     <- LM.new size undefElem
+  LM.copySlice elems 0 tgt 0 size
+  LM.unsafeFreeze tgt
 
 empty :: forall a. IO (Array a)
 empty = do
@@ -82,7 +93,9 @@ unsafeRead (Array r) i = do
 read :: Array a -> Int -> IO a
 read (Array r) i = do
   elems <- RUU.readSnd r
-  if 0 <= i && i < LM.size elems then
+  sizeRef <- RUU.readFst r
+  size <- RF.read sizeRef
+  if 0 <= i && i < size then
     LM.read elems i
   else
     error "Data.Array.Dynamic.L.read: out of bounds"
