@@ -33,7 +33,7 @@ module Data.Array.Dynamic.U  (
   ) where
 
 import Data.Unlifted
-import Data.Array.UndefElem
+import Data.Internal.Errors
 import Data.Kind
 
 import qualified Data.Ref.UU   as RUU
@@ -170,7 +170,7 @@ last :: Unlifted a => Array a -> IO a
 last arr = do
   i <- size arr
   isEmpty arr >>= \case
-    True -> error "Data.Array.Dynamic.last: empty array"
+    True -> error "Data.Array.Dynamic.U.last: empty array"
     _    -> unsafeRead arr (i - 1)
 {-# inline last #-}
 

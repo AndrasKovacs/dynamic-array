@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
+-- This file has been generated from package.yaml by hpack version 0.36.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -20,7 +20,7 @@ library
       Paths_dynamic_array
   hs-source-dirs:
       ./
-  ghc-options: -Wall -Wno-missing-signatures -Wno-name-shadowing -Wno-unused-do-bind -Wno-unused-matches -Wno-partial-type-signatures -O2 -fllvm
+  ghc-options: -Wall -Wno-missing-signatures -Wno-name-shadowing -Wno-unused-do-bind -Wno-unused-matches -Wno-partial-type-signatures -O2
   build-depends:
       base >=4.7 && <5
     , primdata
