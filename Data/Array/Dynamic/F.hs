@@ -1,28 +1,29 @@
+
 {-# language
    RankNTypes, LambdaCase, KindSignatures, RoleAnnotations, BangPatterns,
    GeneralizedNewtypeDeriving, UndecidableInstances #-}
 
 {-|
-Arrays of unlifted elements.
+Arrays of unboxed (flat) elements.
 -}
 
-module Data.Array.Dynamic.U  (
+module Data.Array.Dynamic.F  (
     empty
   , Array(..)
   , capacity
   , clear
   , push
   , pop
-  , Data.Array.Dynamic.U.read
-  , Data.Array.Dynamic.U.show
+  , Data.Array.Dynamic.F.read
+  , Data.Array.Dynamic.F.show
   , size
   , unsafeRead
   , unsafeWrite
   , write
   , unsafeLast
-  , Data.Array.Dynamic.U.last
+  , Data.Array.Dynamic.F.last
   , isEmpty
-  , Data.Array.Dynamic.U.foldl'
+  , Data.Array.Dynamic.F.foldl'
   , foldlIx'
   , foldr'
   , foldrIx'
@@ -36,56 +37,58 @@ import Data.Unlifted
 import Data.Internal.Errors
 import Data.Kind
 
+import Data.Flat (Flat)
+
 import qualified Data.Ref.UU   as RUU
 import qualified Data.Ref.F    as RF
-import qualified Data.Array.UM as UM
-import qualified Data.Array.UI as UI
+import qualified Data.Array.FM as FM
+import qualified Data.Array.FI as FI
 
 type role Array representational
-newtype Array (a :: Type) = Array (RUU.Ref (RF.Ref Int) (UM.Array a))
+newtype Array (a :: Type) = Array (RUU.Ref (RF.Ref Int) (FM.Array a))
   deriving Unlifted
 
 defaultCapacity :: Int
 defaultCapacity = 5
 {-# inline defaultCapacity #-}
 
-empty :: forall a. Unlifted a => IO (Array a)
+empty :: forall a. Flat a => IO (Array a)
 empty = do
   sizeRef <- RF.new 0
-  arrRef  <- UM.new defaultCapacity defaultElem
+  arrRef  <- FM.new defaultCapacity
   Array <$> RUU.new sizeRef arrRef
 {-# inline empty #-}
 
-capacity :: Array a -> IO Int
+capacity :: Flat a => Array a -> IO Int
 capacity (Array r) = do
   elems <- RUU.readSnd r
-  pure $! UM.size elems
+  pure $! FM.size elems
 {-# inline capacity #-}
 
-unsafeRead :: Unlifted a => Array a -> Int -> IO a
+unsafeRead :: Flat a => Array a -> Int -> IO a
 unsafeRead (Array r) i = do
   elems <- RUU.readSnd r
-  UM.read elems i
+  FM.read elems i
 {-# inline unsafeRead #-}
 
-read :: Unlifted a => Array a -> Int -> IO a
+read :: Flat a => Array a -> Int -> IO a
 read (Array r) i = do
   elems <- RUU.readSnd r
   sizeRef <- RUU.readFst r
   size <- RF.read sizeRef
   if 0 <= i && i < size then
-    UM.read elems i
+    FM.read elems i
   else
     error "Data.Array.Dynamic.U.read: out of bounds"
 {-# inline read #-}
 
-unsafeWrite :: Unlifted a => Array a -> Int -> a -> IO ()
+unsafeWrite :: Flat a => Array a -> Int -> a -> IO ()
 unsafeWrite (Array r) i a = do
   elems <- RUU.readSnd r
-  UM.write elems i a
+  FM.write elems i a
 {-# inline unsafeWrite #-}
 
-write :: Unlifted a => Array a -> Int -> a -> IO ()
+write :: Flat a => Array a -> Int -> a -> IO ()
 write (Array r) i ~a = do
   s <- RF.read =<< RUU.readFst r
   if 0 <= i && i < s
@@ -93,24 +96,24 @@ write (Array r) i ~a = do
     else error "Data.Array.Dynamic.U.write: out of bounds"
 {-# inline write #-}
 
-push :: Unlifted a => Array a -> a -> IO ()
+push :: Flat a => Array a -> a -> IO ()
 push (Array r) ~a = do
   sizeRef <- RUU.readFst r
   elems   <- RUU.readSnd r
   size    <- RF.read sizeRef
-  let cap = UM.size elems
+  let cap = FM.size elems
   RF.write sizeRef (size + 1)
   if (size == cap) then do
     let cap' = 2 * cap
-    elems' <- UM.new cap' undefElem
-    UM.copySlice elems 0 elems' 0 size
-    UM.write elems' size a
+    elems' <- FM.new cap'
+    FM.copySlice elems 0 elems' 0 size
+    FM.write elems' size a
     RUU.writeSnd r elems'
   else do
-    UM.write elems size a
+    FM.write elems size a
 {-# inline push #-}
 
-pop :: Unlifted a => Array a -> IO (Maybe a)
+pop :: Flat a => Array a -> IO (Maybe a)
 pop (Array r) = do
   sizeRef <- RUU.readFst r
   size    <- RF.read sizeRef
@@ -119,54 +122,54 @@ pop (Array r) = do
     size -> do
       elems <- RUU.readSnd r
       let size' = size - 1
-      a <- UM.read elems size'
-      UM.write elems size' undefElem
+      a <- FM.read elems size'
+      FM.write elems size' undefElem
       RF.write sizeRef size'
       pure $! Just a
 {-# inline pop #-}
 
-fromList :: Unlifted a => [a] -> IO (Array a)
+fromList :: Flat a => [a] -> IO (Array a)
 fromList as = do
   let size = length as
       cap  = size + defaultCapacity
   sizeRef <- RF.new size
-  arrRef  <- UM.new cap defaultElem
+  arrRef  <- FM.new cap
   arr     <- RUU.new sizeRef arrRef
   let go !i []     = pure ()
-      go i  (a:as) = UM.write arrRef i a >> go (i + 1) as
+      go i  (a:as) = FM.write arrRef i a >> go (i + 1) as
   go 0 as
   pure (Array arr)
 
-freeze :: Unlifted a => Array a -> IO (UI.Array a)
+freeze :: Flat a => Array a -> IO (FI.Array a)
 freeze (Array arr) = do
   sizeRef <- RUU.readFst arr
   elems   <- RUU.readSnd arr
   size    <- RF.read sizeRef
-  tgt     <- UM.new size defaultElem
-  UM.copySlice elems 0 tgt 0 size
-  UM.unsafeFreeze tgt
+  tgt     <- FM.new size
+  FM.copySlice elems 0 tgt 0 size
+  FM.unsafeFreeze tgt
 
-clear :: Unlifted a => Array a -> IO ()
+clear :: Flat a => Array a -> IO ()
 clear (Array r) = do
   (`RF.write` 0) =<< RUU.readFst r
-  RUU.writeSnd r =<< UM.new defaultCapacity undefElem
+  RUU.writeSnd r =<< FM.new defaultCapacity
 {-# inline clear #-}
 
 size :: Array a -> IO Int
 size (Array r) = RF.read =<< RUU.readFst r
 {-# inline size #-}
 
-unsafeLast :: Unlifted a => Array a -> IO a
+unsafeLast :: Flat a => Array a -> IO a
 unsafeLast arr = do
   i <- size arr
-  Data.Array.Dynamic.U.unsafeRead arr (i - 1)
+  Data.Array.Dynamic.F.unsafeRead arr (i - 1)
 {-# inline unsafeLast #-}
 
 isEmpty :: Array a -> IO Bool
 isEmpty arr = (==0) <$> size arr
 {-# inline isEmpty #-}
 
-last :: Unlifted a => Array a -> IO a
+last :: Flat a => Array a -> IO a
 last arr = do
   i <- size arr
   isEmpty arr >>= \case
@@ -174,15 +177,15 @@ last arr = do
     _    -> unsafeRead arr (i - 1)
 {-# inline last #-}
 
-show :: (Show a, Unlifted a) => Array a -> IO String
+show :: (Show a, Flat a) => Array a -> IO String
 show (Array r) = do
   elems  <- RUU.readSnd r
   size <- RF.read =<< RUU.readFst r
-  elems' <- UM.freezeSlice elems 0 size
+  elems' <- FM.freezeSlice elems 0 size
   pure (Prelude.show elems')
 {-# inlinable show #-}
 
-foldl' :: Unlifted a => (b -> a -> b) -> b -> Array a -> IO b
+foldl' :: Flat a => (b -> a -> b) -> b -> Array a -> IO b
 foldl' f b = \arr -> do
   s <- size arr
   let go i b | i == s    = pure b
@@ -192,7 +195,7 @@ foldl' f b = \arr -> do
   go 0 b
 {-# inline foldl' #-}
 
-foldlIx' :: Unlifted a => (Int -> b -> a -> b) -> b -> Array a -> IO b
+foldlIx' :: Flat a => (Int -> b -> a -> b) -> b -> Array a -> IO b
 foldlIx' f b = \arr -> do
   s <- size arr
   let go i b | i == s    = pure b
@@ -202,7 +205,7 @@ foldlIx' f b = \arr -> do
   go 0 b
 {-# inline foldlIx' #-}
 
-foldr' :: Unlifted a => (a -> b -> b) -> b -> Array a -> IO b
+foldr' :: Flat a => (a -> b -> b) -> b -> Array a -> IO b
 foldr' f b = \arr -> do
   s <- size arr
   let go i b | i == (-1) = pure b
@@ -212,7 +215,7 @@ foldr' f b = \arr -> do
   go (s - 1) b
 {-# inline foldr' #-}
 
-foldrIx' :: Unlifted a => (Int -> a -> b -> b) -> b -> Array a -> IO b
+foldrIx' :: Flat a => (Int -> a -> b -> b) -> b -> Array a -> IO b
 foldrIx' f b = \arr -> do
   s <- size arr
   let go i b | i == (-1) = pure b
@@ -222,14 +225,14 @@ foldrIx' f b = \arr -> do
   go (s - 1) b
 {-# inline foldrIx' #-}
 
-for :: Unlifted a => Array a -> (a -> IO b) -> IO ()
+for :: Flat a => Array a -> (a -> IO b) -> IO ()
 for arr f = go (0 :: Int) where
   go i = do
     s <- size arr
     if i == s then pure () else do {x <- unsafeRead arr i; f x; go (i + 1)}
 {-# inline for #-}
 
-forIx :: Unlifted a => Array a -> (Int -> a -> IO b) -> IO ()
+forIx :: Flat a => Array a -> (Int -> a -> IO b) -> IO ()
 forIx arr f = go (0 :: Int) where
   go i = do
     s <- size arr

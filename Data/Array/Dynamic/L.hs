@@ -2,6 +2,10 @@
    RankNTypes, LambdaCase, KindSignatures, RoleAnnotations, BangPatterns,
    GeneralizedNewtypeDeriving, UndecidableInstances #-}
 
+{-|
+Arrays of lifted elements.
+-}
+
 module Data.Array.Dynamic.L  (
     empty
   , Array(..)
@@ -19,16 +23,12 @@ module Data.Array.Dynamic.L  (
   , unsafeLast
   , Data.Array.Dynamic.L.last
   , isEmpty
-  , foldl'
+  , Data.Array.Dynamic.L.foldl'
   , foldlIx'
   , foldr'
   , foldrIx'
   , fromList
   , freeze
-  , Data.Array.Dynamic.L.any
-  , Data.Array.Dynamic.L.all
-  , allIx
-  , anyIx
   , for
   , forIx
   ) where
@@ -237,22 +237,6 @@ foldrIx' f b = \arr -> do
                  go (i - 1) $! f i a b
   go (s - 1) b
 {-# inline foldrIx' #-}
-
-any :: (a -> Bool) -> Array a -> IO Bool
-any f = foldl' (\b a -> f a || b) False
-{-# inline any #-}
-
-all :: (a -> Bool) -> Array a -> IO Bool
-all f = foldl' (\b a -> f a && b) True
-{-# inline all #-}
-
-anyIx :: (Int -> a -> Bool) -> Array a -> IO Bool
-anyIx f = foldlIx' (\i b a -> f i a || b) False
-{-# inline anyIx #-}
-
-allIx :: (Int -> a -> Bool) -> Array a -> IO Bool
-allIx f = foldlIx' (\i b a -> f i a && b) True
-{-# inline allIx #-}
 
 for :: Array a -> (a -> IO b) -> IO ()
 for arr f = go (0 :: Int) where
