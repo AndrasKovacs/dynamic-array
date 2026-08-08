@@ -140,11 +140,14 @@ fromList as = do
 freeze :: Unlifted a => Array a -> IO (UI.Array a)
 freeze (Array arr) = do
   sizeRef <- RUU.readFst arr
-  elems   <- RUU.readSnd arr
   size    <- RF.read sizeRef
-  tgt     <- UM.new size defaultElem
-  UM.copySlice elems 0 tgt 0 size
-  UM.unsafeFreeze tgt
+  if size == 0 then
+    pure UI.empty
+  else do
+    elems <- RUU.readSnd arr
+    tgt <- UM.new size defaultElem
+    UM.copySlice elems 0 tgt 0 size
+    UM.unsafeFreeze tgt
 
 clear :: Unlifted a => Array a -> IO ()
 clear (Array r) = do

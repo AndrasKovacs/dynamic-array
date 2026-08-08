@@ -143,11 +143,14 @@ fromList as = do
 freeze :: Flat a => Array a -> IO (FI.Array a)
 freeze (Array arr) = do
   sizeRef <- RUU.readFst arr
-  elems   <- RUU.readSnd arr
   size    <- RF.read sizeRef
-  tgt     <- FM.new size
-  FM.copySlice elems 0 tgt 0 size
-  FM.unsafeFreeze tgt
+  if size == 0 then
+    pure FI.empty
+  else do
+    elems <- RUU.readSnd arr
+    tgt <- FM.new size
+    FM.copySlice elems 0 tgt 0 size
+    FM.unsafeFreeze tgt
 
 clear :: Flat a => Array a -> IO ()
 clear (Array r) = do

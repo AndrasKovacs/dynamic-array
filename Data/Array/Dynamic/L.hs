@@ -65,11 +65,14 @@ fromList as = do
 freeze :: Array a -> IO (LI.Array a)
 freeze (Array arr) = do
   sizeRef <- RUU.readFst arr
-  elems   <- RUU.readSnd arr
   size    <- RF.read sizeRef
-  tgt     <- LM.new size undefElem
-  LM.copySlice elems 0 tgt 0 size
-  LM.unsafeFreeze tgt
+  if size == 0 then
+    pure LI.empty
+  else do
+    elems <- RUU.readSnd arr
+    tgt <- LM.new size undefElem
+    LM.copySlice elems 0 tgt 0 size
+    LM.unsafeFreeze tgt
 
 empty :: forall a. IO (Array a)
 empty = do
